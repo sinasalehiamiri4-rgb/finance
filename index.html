@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دخل‌وخرج | ردیاب مالی شخصی</title>
+<meta name="description" content="ردیاب مالی شخصی: ثبت درآمد و هزینه، فیلتر ماهانه، گزارش دسته‌بندی و خروجی CSV. داده‌ها فقط در مرورگر تو ذخیره می‌شوند.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230e5e6f'/%3E%3Ccircle cx='32' cy='32' r='15' fill='%23f2a93b'/%3E%3Cpath d='M24 33h16M32 25v16' stroke='%230e5e6f' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap">
+<style>
+  :root { --bg:#eef2f6; --card:#fff; --ink:#0f1b2d; --muted:#5d6b7e; --line:#d9e0e8;
+          --brand:#0e5e6f; --gold:#f2a93b; --income:#178a5b; --expense:#c8442f; --soft:#f4f7fa; }
+  :root[data-theme="dark"] { --bg:#0d1520; --card:#162231; --ink:#e7edf5; --muted:#93a3b8; --line:#273a50;
+          --brand:#5bc0d3; --gold:#f2a93b; --income:#4cc29a; --expense:#f0806c; --soft:#0f1a28; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#0d1520; --card:#162231; --ink:#e7edf5; --muted:#93a3b8; --line:#273a50;
+          --brand:#5bc0d3; --gold:#f2a93b; --income:#4cc29a; --expense:#f0806c; --soft:#0f1a28; }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Vazirmatn",Tahoma,sans-serif; line-height:1.7; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 16px; }
+  header { background:var(--card); border-bottom:1px solid var(--line); }
+  header .wrap { display:flex; align-items:center; gap:12px; padding-top:12px; padding-bottom:12px; flex-wrap:wrap; }
+  .logo { display:flex; align-items:center; gap:10px; margin-inline-end:auto; }
+  .logo svg { width:40px; height:40px; flex:none; }
+  .logo b { font-size:1.25rem; font-weight:800; display:block; line-height:1.2; }
+  .logo span { font-size:.78rem; color:var(--muted); }
+  main { padding-top:20px; padding-bottom:40px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:16px; }
+  .card, section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .card small { color:var(--muted); display:block; }
+  .card strong { font-size:1.6rem; font-weight:800; display:block; overflow-wrap:anywhere; }
+  .card.bal strong { color:var(--brand); } .card.inc strong { color:var(--income); } .card.exp strong { color:var(--expense); }
+  .layout { display:grid; gap:16px; grid-template-columns:minmax(0,1fr); }
+  @media (min-width:880px) { .layout { grid-template-columns:340px minmax(0,1fr); align-items:start; } aside { position:sticky; top:16px; } }
+  aside section + section { margin-top:16px; }
+  h2 { font-size:1rem; margin:0 0 12px; }
+  form { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .full { grid-column:1/-1; }
+  input, select, button { font:inherit; font-size:16px; min-height:44px; padding:8px 12px; border-radius:8px;
+          border:1px solid var(--line); background:var(--soft); color:var(--ink); width:100%; }
+  button { cursor:pointer; font-weight:600; }
+  .primary { background:var(--brand); border-color:var(--brand); color:#fff; }
+  :root[data-theme="dark"] .primary { color:#06202a; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .primary { color:#06202a; } }
+  .ghost { width:auto; background:transparent; }
+  :focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+  .seg { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .seg label { display:flex; align-items:center; justify-content:center; min-height:44px; border:1px solid var(--line);
+          border-radius:8px; cursor:pointer; font-weight:600; background:var(--soft); }
+  .seg input { position:absolute; opacity:0; width:0; min-height:0; }
+  .seg input:checked + span { color:#fff; }
+  .seg label:has(input:checked) { background:var(--expense); border-color:var(--expense); color:#fff; }
+  .seg label.in:has(input:checked) { background:var(--income); border-color:var(--income); }
+  .seg label:has(input:focus-visible) { outline:2px solid var(--brand); outline-offset:2px; }
+  .filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:8px; }
+  ul { list-style:none; margin:0; padding:0; }
+  li { display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid var(--line); }
+  li:last-child { border-bottom:0; }
+  .dot { width:10px; height:10px; border-radius:50%; flex:none; }
+  .dot.income { background:var(--income); } .dot.expense { background:var(--expense); }
+  .t { flex:1; min-width:0; overflow-wrap:anywhere; } .t small { display:block; color:var(--muted); }
+  .amt { font-weight:600; white-space:nowrap; } .amt.income { color:var(--income); } .amt.expense { color:var(--expense); }
+  .icon { width:40px; min-height:40px; padding:0; flex:none; background:transparent; border:0; color:var(--muted); font-size:1.05rem; }
+  .bar { margin-bottom:12px; font-size:.92rem; }
+  .bar .row { display:flex; justify-content:space-between; gap:8px; }
+  .track { height:8px; background:var(--line); border-radius:4px; margin-top:4px; overflow:hidden; }
+  .fill { height:100%; background:var(--expense); border-radius:4px; }
+  .empty { color:var(--muted); margin:0; text-align:center; padding:16px 0; }
+  footer { text-align:center; color:var(--muted); font-size:.85rem; padding:8px 16px 32px; }
+  @media (max-width:520px) { .card strong { font-size:1.35rem; } header .ghost span { display:none; } }
+  @media (prefers-reduced-motion: no-preference) { .fill { transition:width .3s; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="logo">
+      <svg viewBox="0 0 64 64" role="img" aria-label="لوگوی دخل‌وخرج">
+        <rect width="64" height="64" rx="14" fill="var(--brand)"/>
+        <circle cx="32" cy="32" r="16" fill="var(--gold)"/>
+        <path d="M24 33h16M32 25v16" stroke="var(--brand)" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <div><b>دخل‌وخرج</b><span>ردیاب مالی شخصی</span></div>
+    </div>
+    <button class="ghost" id="export" title="خروجی CSV">⬇ <span>خروجی CSV</span></button>
+    <button class="ghost" id="theme" aria-label="تغییر تم">◐</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="cards">
+    <div class="card bal"><small>موجودی</small><strong id="balance">۰</strong></div>
+    <div class="card inc"><small>درآمد</small><strong id="income">۰</strong></div>
+    <div class="card exp"><small>هزینه</small><strong id="expense">۰</strong></div>
+  </div>
+
+  <div class="layout">
+    <aside>
+      <section>
+        <h2 id="formTitle">تراکنش جدید</h2>
+        <form id="form">
+          <div class="seg full" role="radiogroup" aria-label="نوع تراکنش">
+            <label><input type="radio" name="type" value="expense" checked><span>هزینه</span></label>
+            <label class="in"><input type="radio" name="type" value="income"><span>درآمد</span></label>
+          </div>
+          <input class="full" id="title" placeholder="عنوان (مثلاً خرید نان)" maxlength="60" required>
+          <input id="amount" type="number" inputmode="decimal" min="0" step="any" placeholder="مبلغ" required>
+          <input id="date" type="date" required aria-label="تاریخ">
+          <select class="full" id="category" aria-label="دسته">
+            <option>خوراک</option><option>حمل‌ونقل</option><option>قبوض</option>
+            <option>سلامت</option><option>تفریح</option><option>حقوق</option><option>سایر</option>
+          </select>
+          <button class="primary full" id="submit">ثبت تراکنش</button>
+          <button type="button" class="full" id="cancel" hidden>انصراف از ویرایش</button>
+        </form>
+      </section>
+      <section>
+        <h2>هزینه‌ها بر اساس دسته</h2>
+        <div id="chart"></div>
+      </section>
+    </aside>
+
+    <section>
+      <h2>تراکنش‌ها</h2>
+      <div class="filters">
+        <select id="month" aria-label="ماه"></select>
+        <select id="ftype" aria-label="نوع">
+          <option value="">همه‌ی انواع</option><option value="expense">فقط هزینه</option><option value="income">فقط درآمد</option>
+        </select>
+        <input id="q" type="search" placeholder="جستجو..." aria-label="جستجو">
+      </div>
+      <ul id="list"></ul>
+    </section>
+  </div>
+</main>
+<footer>داده‌ها فقط روی همین مرورگر ذخیره می‌شن و جایی ارسال نمی‌شن.</footer>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const fmt = n => Number(n).toLocaleString("fa-IR");
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+  const toDate = iso => new Date(iso + "T12:00:00");
+  const keyFmt = new Intl.DateTimeFormat("en-u-ca-persian-nu-latn", { year: "numeric", month: "numeric" });
+  const monthKey = iso => { const p = keyFmt.formatToParts(toDate(iso)); const g = t => p.find(x => x.type === t).value; return g("year") + "-" + g("month").padStart(2, "0"); };
+  const monthLabel = iso => toDate(iso).toLocaleDateString("fa-IR", { year: "numeric", month: "long" });
+  const dayLabel = iso => toDate(iso).toLocaleDateString("fa-IR", { day: "numeric", month: "long" });
+
+  let items = [], editId = null;
+  try { items = (JSON.parse(localStorage.getItem("transactions")) || []).map(t => ({ category: "سایر", date: today(), ...t })); } catch (e) {}
+  const save = () => { try { localStorage.setItem("transactions", JSON.stringify(items)); } catch (e) {} };
+
+  // theme
+  const root = document.documentElement;
+  try { const th = localStorage.getItem("theme"); if (th) root.dataset.theme = th; } catch (e) {}
+  $("theme").onclick = () => {
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+  };
+
+  function fillMonths() {
+    const sel = $("month"), cur = sel.value;
+    const months = new Map();
+    items.forEach(t => months.set(monthKey(t.date), monthLabel(t.date)));
+    const sorted = [...months].sort((a, b) => b[0].localeCompare(a[0]));
+    sel.innerHTML = '<option value="">همه‌ی ماه‌ها</option>' + sorted.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+    sel.value = months.has(cur) ? cur : "";
+  }
+
+  function render() {
+    fillMonths();
+    const m = $("month").value;
+    const inMonth = items.filter(t => !m || monthKey(t.date) === m);
+    const sum = type => inMonth.filter(t => t.type === type).reduce((s, t) => s + t.amount, 0);
+    const inc = sum("income"), exp = sum("expense");
+    $("balance").textContent = fmt(inc - exp); $("income").textContent = fmt(inc); $("expense").textContent = fmt(exp);
+
+    const q = $("q").value.trim(), ft = $("ftype").value;
+    const shown = inMonth.filter(t => (!ft || t.type === ft) && (!q || (t.title + t.category).includes(q)))
+                         .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+    $("list").innerHTML = shown.length ? shown.map(t => `<li>
+        <span class="dot ${t.type}"></span>
+        <div class="t">${esc(t.title)}<small>${esc(t.category)} • ${dayLabel(t.date)}</small></div>
+        <span class="amt ${t.type}">${t.type === "income" ? "+" : "−"}${fmt(t.amount)}</span>
+        <button class="icon" data-edit="${t.id}" aria-label="ویرایش">✎</button>
+        <button class="icon" data-del="${t.id}" aria-label="حذف">✕</button></li>`).join("")
+      : `<p class="empty">${items.length ? "نتیجه‌ای پیدا نشد." : "هنوز تراکنشی ثبت نکرده‌ای. از فرم شروع کن."}</p>`;
+
+    const by = {};
+    inMonth.filter(t => t.type === "expense").forEach(t => by[t.category] = (by[t.category] || 0) + t.amount);
+    const rows = Object.entries(by).sort((a, b) => b[1] - a[1]);
+    $("chart").innerHTML = rows.length ? rows.map(([c, s]) => { const p = Math.round(s / exp * 100);
+      return `<div class="bar"><div class="row"><span>${esc(c)}</span><span>${fmt(s)} (${fmt(p)}٪)</span></div>
+        <div class="track"><div class="fill" style="width:${p}%"></div></div></div>`; }).join("")
+      : '<p class="empty">هزینه‌ای برای نمایش نیست.</p>';
+  }
+
+  function resetForm() {
+    editId = null; $("form").reset(); $("date").value = today();
+    $("formTitle").textContent = "تراکنش جدید"; $("submit").textContent = "ثبت تراکنش"; $("cancel").hidden = true;
+  }
+
+  $("form").addEventListener("submit", e => {
+    e.preventDefault();
+    const data = { title: $("title").value.trim(), amount: parseFloat($("amount").value), date: $("date").value,
+      category: $("category").value, type: document.querySelector('input[name="type"]:checked').value };
+    if (!data.title || !(data.amount >= 0)) return;
+    if (editId) items = items.map(t => t.id === editId ? { ...t, ...data } : t);
+    else items.push({ id: Date.now(), ...data });
+    save(); resetForm(); render();
+  });
+  $("cancel").onclick = resetForm;
+
+  $("list").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.del) {
+      if (confirm("این تراکنش حذف بشه؟")) { items = items.filter(t => String(t.id) !== b.dataset.del); save(); render(); }
+    } else if (b.dataset.edit) {
+      const t = items.find(x => String(x.id) === b.dataset.edit); if (!t) return;
+      editId = t.id; $("title").value = t.title; $("amount").value = t.amount; $("date").value = t.date;
+      $("category").value = t.category; document.querySelector(`input[name="type"][value="${t.type}"]`).checked = true;
+      $("formTitle").textContent = "ویرایش تراکنش"; $("submit").textContent = "ذخیره تغییرات"; $("cancel").hidden = false;
+      $("title").focus(); scrollTo({ top: 0, behavior: "smooth" });
+    }
+  });
+
+  ["month", "ftype"].forEach(id => $(id).addEventListener("change", render));
+  $("q").addEventListener("input", render);
+
+  $("export").onclick = () => {
+    if (!items.length) return alert("هنوز تراکنشی برای خروجی گرفتن نیست.");
+    const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+    const csv = "\uFEFFعنوان,مبلغ,نوع,دسته,تاریخ\n" + items.map(t =>
+      [q(t.title), t.amount, t.type === "income" ? "درآمد" : "هزینه", q(t.category), t.date].join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = "transactions.csv"; a.click(); URL.revokeObjectURL(a.href);
+  };
+
+  $("date").value = today();
+  render();
+</script>
+</body>
+</html>
